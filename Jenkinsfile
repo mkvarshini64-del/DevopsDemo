@@ -39,12 +39,26 @@ pipeline {
         stage('Unit Tests') {
     steps {
         sh '''
-            set -e
+            set -eu
 
-            docker run --rm \
-              --mount "type=bind,source=$WORKSPACE,target=/work" \
+            TEST_CONTAINER="todo-unit-test-${BUILD_NUMBER}"
+
+            cleanup() {
+                docker rm -f "$TEST_CONTAINER" >/dev/null 2>&1 || true
+            }
+            trap cleanup EXIT
+
+            docker create \
+              --name "$TEST_CONTAINER" \
               -w /work \
               node:20-alpine \
+              sh -c "sleep 600"
+
+            docker start "$TEST_CONTAINER"
+
+            docker cp "$WORKSPACE/." "$TEST_CONTAINER:/work/"
+
+            docker exec "$TEST_CONTAINER" \
               sh -lc "npm install --no-package-lock --no-audit --no-fund && npm test"
         '''
     }
