@@ -10,6 +10,7 @@ pipeline {
     }
 
     environment {
+        KUBECONFIG    = '/var/jenkins_home/.kube/config'
         IMAGE_NAME    = 'todo-app'
         E2E_NAMESPACE = "todo-e2e-${BUILD_NUMBER}"
         K8S_NAMESPACE = 'default'
