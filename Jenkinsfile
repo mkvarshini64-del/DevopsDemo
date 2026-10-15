@@ -64,18 +64,24 @@ pipeline {
     }
 }
 
-        stage('Build Image') {
-            steps {
-                bat '''
-                    @echo off
-                    docker build ^
-                      -t "%IMAGE_NAME%:%BUILD_NUMBER%" ^
-                      -t "%IMAGE_NAME%:latest" .
+        
+stage('Build Image') {
+    steps {
+        sh '''
+            set -eu
 
-                    if errorlevel 1 exit /b 1
-                '''
-            }
-        }
+            echo "Building Docker image..."
+
+            docker build \
+              -t "$IMAGE_NAME:$BUILD_NUMBER" \
+              -t "$IMAGE_NAME:latest" .
+
+            echo "Built images:"
+            docker images "$IMAGE_NAME"
+        '''
+    }
+}
+
 
         stage('Push Image') {
             steps {
