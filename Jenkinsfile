@@ -84,38 +84,39 @@ stage('Build Image') {
 
 
         stage('Push Image') {
-            steps {
-                script {
-                    if (!params.IMAGE_REPOSITORY?.trim()) {
-                        error('IMAGE_REPOSITORY is required for Kubernetes deployment.')
-                    }
-                }
-
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_TOKEN'
-                    )
-                ]) {
-                    bat '''
-                        @echo off
-                        set "IMAGE_REF=%REGISTRY_HOST%/%IMAGE_REPOSITORY%:%BUILD_NUMBER%"
-
-                        powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:REG_PASS | docker login $env:REGISTRY_HOST --username $env:REG_USER --password-stdin"
-                        if errorlevel 1 exit /b 1
-
-                        docker tag "%IMAGE_NAME%:%BUILD_NUMBER%" "%IMAGE_REF%"
-                        if errorlevel 1 exit /b 1
-
-                        docker push "%IMAGE_REF%"
-                        if errorlevel 1 exit /b 1
-
-                        docker logout "%REGISTRY_HOST%"
-                    '''
-                }
+    steps {
+        script {
+            if (!params.IMAGE_REPOSITORY?.trim()) {
+                error('IMAGE_REPOSITORY is required')
             }
         }
+
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'docker-registry',
+                usernameVariable: 'REG_USER',
+                passwordVariable: 'REG_PASS'
+            )
+        ]) {
+            sh '''
+                set -eu
+
+                IMAGE_REF="${REGISTRY_HOST}/${IMAGE_REPOSITORY}:${BUILD_NUMBER}"
+
+                echo "Logging in to Docker registry..."
+
+                printf '%s' "$REG_PASS" |
+                  docker login "$REGISTRY_HOST" \
+                    --username "$REG_USER" --password-stdin
+
+                docker tag "$IMAGE_NAME:$BUILD_NUMBER" "$IMAGE_REF"
+                docker push "$IMAGE_REF"
+
+                docker logout "$REGISTRY_HOST" || true
+            '''
+        }
+    }
+}
 
         stage('Kubernetes E2E Test') {
             steps {
