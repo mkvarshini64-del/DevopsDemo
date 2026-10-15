@@ -37,18 +37,18 @@ pipeline {
         }
 
         stage('Unit Tests') {
-            steps {
-                bat '''
-                    @echo off
-                    docker run --rm ^
-                      --mount "type=bind,source=%WORKSPACE%,target=/work" ^
-                      -w /work node:20-alpine ^
-                      sh -lc "npm install --no-package-lock --no-audit --no-fund && npm test"
+    steps {
+        sh '''
+            set -e
 
-                    if errorlevel 1 exit /b 1
-                '''
-            }
-        }
+            docker run --rm \
+              --mount "type=bind,source=$WORKSPACE,target=/work" \
+              -w /work \
+              node:20-alpine \
+              sh -lc "npm install --no-package-lock --no-audit --no-fund && npm test"
+        '''
+    }
+}
 
         stage('Build Image') {
             steps {
